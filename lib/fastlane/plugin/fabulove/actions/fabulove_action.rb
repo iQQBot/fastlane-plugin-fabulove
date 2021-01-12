@@ -4,6 +4,9 @@ require 'httparty'
 
 module Fastlane
   module Actions
+    module SharedValues
+        FABU_LOVE_VERSION_ID = :FABU_LOVE_VERSION_ID
+    end
     class FabuloveAction < Action
       def self.run(params)
         UI.message("The fabulove plugin is working!")
@@ -21,13 +24,14 @@ module Fastlane
         app_info = self.upload_page(base_url, token, team_id, file_path)
         app_id = app_info['_id']
         version_id = app_info['version']['_id']
+        Actions.lane_context[SharedValues::FABU_LOVE_VERSION_ID] = version_id
 
         if app_id && keep_num > 0
           # 如果上传成功，则进行删除一个老的版本
           self.delete_old_version(base_url, token, app_id, keep_num, team_id)
         end
         
-        UI.message "The fabulove action is end!"
+        UI.message "The fabulove action is end! Version id is " + version_id
         return version_id
       end
 
@@ -115,8 +119,14 @@ module Fastlane
         ["carry"]
       end
 
-      def self.return_value
-        # If your method provides a return value, you can describe here what it does
+      def self.output
+        [
+          ['FABU_LOVE_VERSION_ID', 'The publish version id']
+        ]
+      end
+
+      def self.return_type
+        :string
       end
 
       def self.details
