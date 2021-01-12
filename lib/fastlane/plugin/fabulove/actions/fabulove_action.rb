@@ -18,7 +18,9 @@ module Fastlane
         token = self.get_token(base_url, username, password)
         # UI.message "token:#{token}"
 
-        app_id = self.upload_page(base_url, token, team_id, file_path)
+        app_info = self.upload_page(base_url, token, team_id, file_path)
+        app_id = app_info['_id']
+        version_id = app_info['version']['_id']
 
         if app_id && keep_num > 0
           # 如果上传成功，则进行删除一个老的版本
@@ -26,6 +28,7 @@ module Fastlane
         end
         
         UI.message "The fabulove action is end!"
+        return version_id
       end
 
       def self.get_token (base_url, username, password)
@@ -59,7 +62,7 @@ module Fastlane
           return nil
         end
         UI.message "upload file success"
-        return body['data']['app']['_id']
+        return body['data']['app']
       end
 
       def self.delete_old_version (base_url, token, app_id, keep_num, team_id)
