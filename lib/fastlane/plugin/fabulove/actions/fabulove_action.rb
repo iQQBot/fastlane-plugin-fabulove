@@ -22,7 +22,7 @@ module Fastlane
         # UI.message "token:#{token}"
 
         app_info = self.upload_page(base_url, token, team_id, file_path)
-        app_id = app_info['_id']
+        app_id = app_info['app']['_id']
         version_id = app_info['version']['_id']
         Actions.lane_context[SharedValues::FABU_LOVE_VERSION_ID] = version_id
 
@@ -66,7 +66,7 @@ module Fastlane
           return nil
         end
         UI.message "upload file success"
-        return body['data']['app']
+        return body['data']
       end
 
       def self.delete_old_version (base_url, token, app_id, keep_num, team_id)
