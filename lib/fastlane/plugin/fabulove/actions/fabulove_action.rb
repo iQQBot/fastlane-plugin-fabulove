@@ -14,101 +14,18 @@ module Fastlane
         base_url = params[:base_url]
         team_id = params[:team_id]
         file_path = params[:file_path]
-        username = params[:username]
-        password = params[:password]
-        keep_num = params[:keep_app_versions_num]
 
-        token = self.get_token(base_url, username, password)
-        # UI.message "token:#{token}"
-
-        app_info = self.upload_page(base_url, token, team_id, file_path)
-        app_id = app_info['app']['_id']
-        version_id = app_info['version']['_id']
-        Actions.lane_context[SharedValues::FABU_LOVE_VERSION_ID] = version_id
-
-        if app_id && keep_num > 0
-          # 如果上传成功，则进行删除一个老的版本
-          self.delete_old_version(base_url, token, app_id, keep_num, team_id)
-        end
-        
-        UI.message "The fabulove action is end! Version id is " + version_id
-        return version_id
+        self.upload_page(base_url, team_id, file_path)
+        return 1
       end
 
-      def self.get_token (base_url, username, password)
-        response = HTTParty.post("#{base_url}/api/user/login",{
-          :body => {"username" => username, "password" => password}.to_json,
-          :headers => {'Content-Type'=>'application/json'}
+      def self.upload_page (base_url, team_id, file_path)
+        response = HTTParty.post("#{base_url}/upload?appId=#{team_id}",{
+          :headers => {'accept'=>'application/json',  'Content-Type'=>'multipart/form-data'},
+          :body => {ipa:File.open(file_path)}
         })
-
-        body = JSON.parse(response.body)
-
-        if body['success'] == true
-          UI.message "get token success"          
-        end
-        
-        return body['data']['token']
-      end
-
-      def self.upload_page (base_url, token, team_id, file_path)
-        authorization = "Bearer #{token}"
-        response = HTTParty.post("#{base_url}/api/apps/#{team_id}/upload",{
-          :headers => {'accept'=>'application/json', 'Authorization'=>authorization, 'Content-Type'=>'multipart/form-data'},
-          :body => {file:File.open(file_path)}
-        })
-
-        # puts response.body
-
-        body = JSON.parse(response.body)
-
-        if body['success'] == false
-          UI.message "upload failed，error message：#{body['message']}"
-          return nil
-        end
         UI.message "upload file success"
-        return body['data']
-      end
-
-      def self.delete_old_version (base_url, token, app_id, keep_num, team_id)
-        authorization = "Bearer #{token}"
-        get_response = HTTParty.get("#{base_url}/api/apps/#{team_id}/#{app_id}/versions?page=0&size=#{keep_num*2}",{
-          :headers => {'Content-Type'=>'application/json', 'Authorization'=>authorization}
-        })
-
-        # puts get_response.body
-
-        versions_body = JSON.parse(get_response.body)
-
-        if versions_body['success'] == false
-          UI.message "get app versions failed"
-          return
-        end
-
-        UI.message "get app versions success"
-
-        if versions_body['data'].size <= keep_num
-          UI.message "existing version <= keep_num"
-          return
-        end
-        
-        # 进行删除操作
-        app_version_info = versions_body['data'].first
-        app_version_id = app_version_info['_id']
-
-        delete_response = HTTParty.delete("#{base_url}/api/apps/#{team_id}/#{app_id}/versions/#{app_version_id}",{
-          :headers => {'Content-Type'=>'application/json', 'Authorization'=>authorization}
-        })
-
-        # puts delete_response.body
-
-        delete_version_body = JSON.parse(delete_response.body)
-
-        if delete_version_body['success'] == true
-          UI.message "delete version success"
-        else
-          UI.message "delete version failed"
-        end
-
+        return 1
       end
 
       def self.description
@@ -136,16 +53,6 @@ module Fastlane
 
       def self.available_options
         [
-          FastlaneCore::ConfigItem.new(key: :username,
-                                       env_name: "FL_FABULOVE_USERNAME", # The name of the environment variable
-                                       description: "You fabulove username", # a short description of this parameter
-                                       is_string: true,
-                                       default_value: nil),
-          FastlaneCore::ConfigItem.new(key: :password,
-                                       env_name: "FL_FABULOVE_PASSWORD",
-                                       description: "You fabulove password",
-                                       is_string: true,
-                                       default_value: nil),
           FastlaneCore::ConfigItem.new(key: :base_url,
                                        env_name: "FL_FABULOVE_BASE_URL", # The name of the environment variable
                                        description: "You custom fabulove server url address.Example:https://gitlab.engineerhope.com:444", # a short description of this parameter
@@ -160,13 +67,7 @@ module Fastlane
                                        env_name: "FL_FABULOVE_FILE_PATH",
                                        description: "FILE APP PATH",
                                        default_value: nil,
-                                       optional: true),
-          FastlaneCore::ConfigItem.new(key: :keep_app_versions_num,
-                                       env_name: "FL_FABULOVE_KEEP_NUM",
-                                       description: "Keep app versions number",
-                                       is_string: false,
-                                       default_value: nil,
-                                       optional: false)
+                                       optional: true)
         ]
       end
 
